@@ -536,7 +536,7 @@ def get_weighted_weight_mat(
     delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
     delay_weighting = np.ones((Nbls, Nfreqs))
     for delay_ind, delay_val in enumerate(delay_array):
-        wedge_bls = np.where(wedge_buffer_factor * bl_length / c > np.abs(delay_val))[0]
+        wedge_bls = np.where(wedge_buffer_factor * bl_lengths / c > np.abs(delay_val))[0]
         delay_weighting[wedge_bls, delay_ind] = downweight_frac
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
     weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
