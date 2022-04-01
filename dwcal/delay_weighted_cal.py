@@ -526,96 +526,30 @@ def get_weighted_weight_mat(
     Nfreqs,
     Nbls,
     uvw_array,
-    freq_array,
+    channel_width_hz,
     wedge_buffer_factor=1.2,
     downweight_frac=0.01,
 ):
 
     c = 3.0 * 10 ** 8  # Speed of light
     bl_lengths = np.sqrt(np.sum(uvw_array ** 2.0, axis=1))
-    channel_width = (np.max(freq_array) - np.min(freq_array)) / (Nfreqs - 1)
-    delay_array = np.fft.fftfreq(2 * Nfreqs - 1, d=channel_width)
-    delay_weighting = np.ones((Nbls, 2 * Nfreqs - 1))
+    delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
+    delay_weighting = np.ones((Nbls, Nfreqs))
     for delay_ind, delay_val in enumerate(delay_array):
-        wedge_bls = np.where(wedge_buffer_factor * bl_lengths / c < np.abs(delay_val))[
-            0
-        ]
+        wedge_bls = np.where(wedge_buffer_factor * bl_length / c > np.abs(delay_val))[0]
         delay_weighting[wedge_bls, delay_ind] = downweight_frac
-
-    # Fourier transform
-    freq_weighting = np.fft.fft(delay_weighting, axis=1)
-    # Result is symmetric and real, so keep half the values and real part only
-    freq_weighting = np.real(freq_weighting[:, 0:Nfreqs])
-
-    weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=float)
-    # Set off-diagonals
-    for freq_diff in range(1, Nfreqs):
-        for start_freq in range(Nfreqs - freq_diff):
-            weight_mat[:, start_freq, start_freq + freq_diff] = freq_weighting[
-                :, freq_diff
+    freq_weighting = np.fft.ifft(delay_weighting, axis=1)
+    weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
+    for freq_ind1 in range(Nfreqs):
+        for freq_ind2 in range(Nfreqs):
+            weight_mat[:, freq_ind1, freq_ind2] = freq_weighting[
+                :, np.abs(freq_ind1 - freq_ind2)
             ]
-    weight_mat += np.transpose(weight_mat, axes=(0, 2, 1))
-    # Set diagonals
-    for freq_ind in range(Nfreqs):
-        weight_mat[:, freq_ind, freq_ind] = freq_weighting[:, 0]
 
     # Make normalization match identity matrix weight mat
-    normalization_factor = Nfreqs * Nbls / np.sum(weight_mat)
+    normalization_factor = Nfreqs * Nbls / np.sum(np.abs(weight_mat))
     weight_mat *= normalization_factor
 
-    return weight_mat
-
-
-def get_weight_mat_no_wedge(
-    Nfreqs,
-    Nbls,
-    uvw_array,
-    freq_array,
-    wedge_buffer_factor=1.2,
-    min_baselines=0,
-    min_baseline_len=20.0,
-):
-
-    c = 3.0 * 10 ** 8  # Speed of light
-    bl_lengths = np.sqrt(np.sum(uvw_array ** 2.0, axis=1))
-    freq_step = (np.max(freq_array) - np.min(freq_array)) / (Nfreqs - 1)
-    delay_step = 1 / (2 * (np.max(freq_array) - np.min(freq_array)))
-    delay_array = np.arange(
-        -(Nfreqs - 1) * delay_step, Nfreqs * delay_step, delay_step, dtype=float
-    )
-    delay_weighting = np.zeros((Nbls, 2 * Nfreqs - 1))
-    for delay_ind, delay_val in enumerate(delay_array):
-        if np.abs(delay_val) < min_baseline_len / c:
-            # Use all baselines
-            delay_weighting[:, delay_ind] = 1
-        else:
-            window_bls = np.where(
-                wedge_buffer_factor * bl_lengths / c < np.abs(delay_val)
-            )[0]
-            if len(window_bls) >= min_baselines:
-                delay_weighting[window_bls, delay_ind] = 1
-            else:
-                # Use all baselines
-                delay_weighting[:, delay_ind] = 1
-
-    # Shift delay zero point to the start
-    delay_weighting = np.fft.ifftshift(delay_weighting, axes=1)
-    # Fourier transform
-    freq_weighting = np.fft.fft(delay_weighting, axis=1)
-    # Result is symmetric and real, so keep half the values and real part only
-    freq_weighting = np.real(freq_weighting[:, 0:Nfreqs])
-
-    weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=float)
-    # Set off-diagonals
-    for freq_diff in range(1, Nfreqs):
-        for start_freq in range(Nfreqs - freq_diff):
-            weight_mat[:, start_freq, start_freq + freq_diff] = freq_weighting[
-                :, freq_diff
-            ]
-    weight_mat += np.transpose(weight_mat, axes=(0, 2, 1))
-    # Set diagonals
-    for freq_ind in range(Nfreqs):
-        weight_mat[:, freq_ind, freq_ind] = freq_weighting[:, 0]
     return weight_mat
 
 
@@ -881,7 +815,7 @@ def calibration_optimization(
         #    Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.freq_array
         # )
         weight_mat = get_weighted_weight_mat(
-            Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.freq_array
+            Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
         )
     else:
         print(f"use_wedge_exclusion=False: Covariance matrix is the identity")
