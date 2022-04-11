@@ -527,8 +527,8 @@ def get_weighted_weight_mat(
     Nbls,
     uvw_array,
     channel_width_hz,
-    wedge_buffer_factor=1.2,
-    downweight_frac=0.01,
+    wedge_slope_factor=0.653,
+    downweight_frac=0.053,
 ):
 
     c = 3.0 * 10 ** 8  # Speed of light
@@ -536,7 +536,7 @@ def get_weighted_weight_mat(
     delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
     delay_weighting = np.ones((Nbls, Nfreqs))
     for delay_ind, delay_val in enumerate(delay_array):
-        wedge_bls = np.where(wedge_buffer_factor * bl_lengths / c > np.abs(delay_val))[0]
+        wedge_bls = np.where(wedge_slope_factor * bl_lengths / c > np.abs(delay_val))[0]
         delay_weighting[wedge_bls, delay_ind] = downweight_frac
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
     weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
@@ -1009,30 +1009,3 @@ def get_calibration_reference():
     cal_obj = pyuvdata.UVCal()
     cal_obj.read_fhd_cal(cal_file_path, obs_file_path)
     gains = np.copy(cal_obj.gain_array)
-
-
-if __name__ == "__main__":
-    calibrate(
-        model_path="/Users/ruby/Astro/dwcal_tests_Jan2022/fhd_rlb_model_GLEAM_bright_sources_Dec2021",
-        model_use_model=True,
-        data_path="/Users/ruby/Astro/dwcal_tests_Jan2022/fhd_rlb_model_GLEAM_bright_sources_Dec2021",
-        data_use_model=False,
-        obsid="1061316296",
-        pol="XX",
-        use_autos=False,
-        cal_savefile="/Users/ruby/Astro/dwcal_tests_Jan2022/vanilla_limited_antennas.calfits",
-        use_wedge_exclusion=False,
-        use_antenna_list=[3, 4, 57, 70, 92, 110],
-    )
-    calibrate(
-        model_path="/Users/ruby/Astro/dwcal_tests_Jan2022/fhd_rlb_model_GLEAM_bright_sources_Dec2021",
-        model_use_model=True,
-        data_path="/Users/ruby/Astro/dwcal_tests_Jan2022/fhd_rlb_model_GLEAM_bright_sources_Dec2021",
-        data_use_model=False,
-        obsid="1061316296",
-        pol="XX",
-        use_autos=False,
-        cal_savefile="/Users/ruby/Astro/dwcal_tests_Jan2022/wedge_excluded_limited_antennas.calfits",
-        use_wedge_exclusion=True,
-        use_antenna_list=[3, 4, 57, 70, 92, 110],
-    )
