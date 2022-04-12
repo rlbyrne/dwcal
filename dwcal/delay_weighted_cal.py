@@ -528,6 +528,7 @@ def get_weighted_weight_mat(
     uvw_array,
     channel_width_hz,
     wedge_slope_factor=0.653,
+    wedge_delay_buffer=6.5e-8,
     downweight_frac=0.053,
 ):
 
@@ -536,7 +537,7 @@ def get_weighted_weight_mat(
     delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
     delay_weighting = np.ones((Nbls, Nfreqs))
     for delay_ind, delay_val in enumerate(delay_array):
-        wedge_bls = np.where(wedge_slope_factor * bl_lengths / c > np.abs(delay_val))[0]
+        wedge_bls = np.where(wedge_slope_factor * bl_lengths / c + wedge_delay_buffer > np.abs(delay_val))[0]
         delay_weighting[wedge_bls, delay_ind] = downweight_frac
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
     weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
@@ -735,7 +736,7 @@ def calibration_optimization(
     use_wedge_exclusion=False,
     log_file_path=None,
     apply_flags=False,
-    xtol=1e-8,
+    xtol=1e-10,
     gain_init_stddev=0.01,
     use_newtons_method=False,
     use_grad_descent=False,
