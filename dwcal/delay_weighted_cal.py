@@ -659,6 +659,7 @@ def newtons_method_optimizer(
             data_visibilities,
         )
         print(f"Iteration {n_iters}, cost func value: {cost}")
+        sys.stdout.flush()
         check_conv = np.max(np.abs(x1 - x0))
         if check_conv < covergence_condition:
             convergence_iters += 1
@@ -718,6 +719,7 @@ def grad_descent_optimizer(
             verbose=False,
         )
         print(f"Iteration {n_iters}, cost func value: {cost}")
+        sys.stdout.flush()
         check_conv = np.max(np.abs(x1 - x0))
         if check_conv < covergence_condition:
             convergence_iters += 1
