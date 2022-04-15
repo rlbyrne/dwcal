@@ -72,7 +72,7 @@ def get_test_data(
         model.select(antenna_nums=use_antenna_list)
 
     if not use_autos:  # Remove autocorrelations
-        bl_lengths = np.sqrt(np.sum(model.uvw_array ** 2.0, axis=1))
+        bl_lengths = np.sqrt(np.sum(model.uvw_array**2.0, axis=1))
         non_autos = np.where(bl_lengths > 0.01)[0]
         model.select(blt_inds=non_autos)
 
@@ -121,7 +121,7 @@ def get_test_data(
         if use_antenna_list is not None:
             data.select(antenna_nums=use_antenna_list)
         if not use_autos:  # Remove autocorrelations
-            bl_lengths = np.sqrt(np.sum(data.uvw_array ** 2.0, axis=1))
+            bl_lengths = np.sqrt(np.sum(data.uvw_array**2.0, axis=1))
             non_autos = np.where(bl_lengths > 0.01)[0]
             data.select(blt_inds=non_autos)
     else:
@@ -442,7 +442,7 @@ def hess_dw_cal(
 
         # Real-imaginary derivative
         term1_ri = -2 * lambda_val * np.einsum("ik,jk->ijk", im_part, real_part)
-        term2_ri = 2 * lambda_val * arg_sum * (im_part ** 2.0 - real_part ** 2.0)
+        term2_ri = 2 * lambda_val * arg_sum * (im_part**2.0 - real_part**2.0)
 
         # Imaginary-imaginary derivative
         term1_ii = 2 * lambda_val * np.einsum("ik,jk->ijk", real_part, real_part)
@@ -532,12 +532,14 @@ def get_weighted_weight_mat(
     downweight_frac=0.053,
 ):
 
-    c = 3.0 * 10 ** 8  # Speed of light
-    bl_lengths = np.sqrt(np.sum(uvw_array ** 2.0, axis=1))
+    c = 3.0 * 10**8  # Speed of light
+    bl_lengths = np.sqrt(np.sum(uvw_array**2.0, axis=1))
     delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
     delay_weighting = np.ones((Nbls, Nfreqs))
     for delay_ind, delay_val in enumerate(delay_array):
-        wedge_bls = np.where(wedge_slope_factor * bl_lengths / c + wedge_delay_buffer > np.abs(delay_val))[0]
+        wedge_bls = np.where(
+            wedge_slope_factor * bl_lengths / c + wedge_delay_buffer > np.abs(delay_val)
+        )[0]
         delay_weighting[wedge_bls, delay_ind] = downweight_frac
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
     weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
@@ -943,6 +945,10 @@ def calibrate(
     use_antenna_list=None,
     use_flagged_baselines=False,
     apply_flags=False,
+    xtol=1e-10,
+    gain_init_stddev=0.01,
+    use_newtons_method=False,
+    use_grad_descent=False,
 ):
 
     if log_file_path is not None:
@@ -974,6 +980,10 @@ def calibrate(
         use_wedge_exclusion=use_wedge_exclusion,
         log_file_path=log_file_path,
         apply_flags=apply_flags,
+        xtol=xtol,
+        gain_init_stddev=gain_init_stddev,
+        use_newtons_method=use_newtons_method,
+        use_grad_descent=use_grad_descent,
     )
 
     if cal_savefile is not None:
@@ -1001,12 +1011,3 @@ def calibrate(
 
     if log_file_path is not None:
         sys.stdout.close()
-
-
-def get_calibration_reference():
-
-    cal_file_path = "/Users/ruby/Astro/FHD_outputs/fhd_rlb_perfreq_cal_Feb2021/calibration/1061316296_cal.sav"
-    obs_file_path = "/Users/ruby/Astro/FHD_outputs/fhd_rlb_perfreq_cal_Feb2021/metadata/1061316296_obs.sav"
-    cal_obj = pyuvdata.UVCal()
-    cal_obj.read_fhd_cal(cal_file_path, obs_file_path)
-    gains = np.copy(cal_obj.gain_array)
