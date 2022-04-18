@@ -816,9 +816,6 @@ def calibration_optimization(
     if use_wedge_exclusion:
         print(f"use_wedge_exclusion=True: Generating wedge excluding covariance matrix")
         sys.stdout.flush()
-        # weight_mat = get_weight_mat_no_wedge(
-        #    Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.freq_array
-        # )
         weight_mat = get_weighted_weight_mat(
             Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
         )
