@@ -734,6 +734,27 @@ def grad_descent_optimizer(
     return x1
 
 
+def initialize_gains_from_calfile(
+    gain_init_calfile,
+    Nants,
+    Nfreqs,
+    antenna_list,
+    antenna_names,
+    time_ind=0,
+    pol_ind=0,
+):
+
+    uvcal = pyuvdata.UVCal()
+    uvcal.read_calfits(gain_init_calfile)
+    gains_init = np.ones((Nants, Nfreqs), dtype=complex)
+    for ind, ant in enumerate(antenna_list):
+        ant_name = antenna_names[ant]
+        cal_ant_ind = np.where(np.array(uvcal.antenna_names) == ant_name)[0][0]
+        gains_init[ind, :] = uvcal.gain_array[cal_ant_ind, 0, :, time_ind, pol_ind]
+
+    return gains_init
+
+
 def calibration_optimization(
     data,
     model,
@@ -742,6 +763,7 @@ def calibration_optimization(
     apply_flags=False,
     xtol=1e-10,
     gain_init_stddev=0.01,
+    gain_init_calfile=None,
     use_newtons_method=False,
     use_grad_descent=False,
 ):
@@ -800,15 +822,27 @@ def calibration_optimization(
         ] = 1
 
     # Initialize gains
-    gains_init = np.random.normal(
-        1.0,
-        gain_init_stddev,
-        size=(Nants, Nfreqs),
-    ) + 1.0j * np.random.normal(
-        0.0,
-        gain_init_stddev,
-        size=(Nants, Nfreqs),
-    )
+    if gain_init_calfile is None:
+        gains_init = np.ones((Nants, Nfreqs), dtype=complex)
+    else:
+        gains_init = initialize_gains_from_calfile(
+            gain_init_calfile,
+            Nants,
+            Nfreqs,
+            antenna_list,
+            metadata_reference.antenna_names,
+        )
+
+    if gain_init_stddev != 0.0:
+        gains_init += np.random.normal(
+            0.0,
+            gain_init_stddev,
+            size=(Nants, Nfreqs),
+        ) + 1.0j * np.random.normal(
+            0.0,
+            gain_init_stddev,
+            size=(Nants, Nfreqs),
+        )
     # Expand the initialized values
     x0 = np.stack((np.real(gains_init), np.imag(gains_init)), axis=0).flatten()
 
@@ -946,6 +980,7 @@ def calibrate(
     apply_flags=False,
     xtol=1e-10,
     gain_init_stddev=0.01,
+    gain_init_calfile=None,
     use_newtons_method=False,
     use_grad_descent=False,
 ):
@@ -981,6 +1016,7 @@ def calibrate(
         apply_flags=apply_flags,
         xtol=xtol,
         gain_init_stddev=gain_init_stddev,
+        gain_init_calfile=gain_init_calfile,
         use_newtons_method=use_newtons_method,
         use_grad_descent=use_grad_descent,
     )
