@@ -747,9 +747,10 @@ def initialize_gains_from_calfile(
     uvcal = pyuvdata.UVCal()
     uvcal.read_calfits(gain_init_calfile)
     gains_init = np.ones((Nants, Nfreqs), dtype=complex)
+    cal_ant_names = np.array([uvcal.antenna_names[ant] for ant in uvcal.ant_array])
     for ind, ant in enumerate(antenna_list):
         ant_name = antenna_names[ant]
-        cal_ant_ind = np.where(np.array(uvcal.antenna_names) == ant_name)[0][0]
+        cal_ant_ind = np.where(cal_ant_names == ant_name)[0][0]
         gains_init[ind, :] = uvcal.gain_array[cal_ant_ind, 0, :, time_ind, pol_ind]
 
     return gains_init
