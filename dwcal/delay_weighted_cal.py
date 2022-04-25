@@ -558,7 +558,6 @@ def get_weighted_weight_mat(
 
 def apply_calibration(
     cal,
-    calibrated_data_savefile,
     data_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
     data_use_model=True,
     obsid="1061316296",
@@ -762,7 +761,7 @@ def calibration_optimization(
     use_wedge_exclusion=False,
     log_file_path=None,
     apply_flags=False,
-    xtol=1e-10,
+    xtol=1e-8,
     gain_init_stddev=0.01,
     gain_init_calfile=None,
     use_newtons_method=False,
@@ -979,7 +978,7 @@ def calibrate(
     use_antenna_list=None,
     use_flagged_baselines=False,
     apply_flags=False,
-    xtol=1e-10,
+    xtol=1e-8,
     gain_init_stddev=0.01,
     gain_init_calfile=None,
     use_newtons_method=False,
@@ -1031,7 +1030,6 @@ def calibrate(
     if calibrated_data_savefile is not None:
         calibrated_data = apply_calibration(
             cal,
-            calibrated_data_savefile,
             data_path=data_path,
             data_use_model=data_use_model,
             obsid=obsid,
