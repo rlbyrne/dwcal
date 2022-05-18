@@ -226,7 +226,8 @@ def cost_function_dw_cal(
 ):
 
     if lambda_val is None:
-        lambda_val = float(Nbls)
+        #lambda_val = float(Nbls)
+        lambda_val = 1.
 
     gains = np.reshape(x, (2, Nants, Nfreqs))
     gains = gains[0, :, :] + 1.0j * gains[1, :, :]
@@ -262,7 +263,8 @@ def jac_dw_cal(
 ):
 
     if lambda_val is None:
-        lambda_val = float(Nbls)
+        #lambda_val = float(Nbls)
+        lambda_val = 1.
 
     gains = np.reshape(x, (2, Nants, Nfreqs))
     gains = gains[0, :, :] + 1.0j * gains[1, :, :]
@@ -289,17 +291,17 @@ def jac_dw_cal(
     grad = np.stack((np.real(grad), np.imag(grad)), axis=0).flatten()
 
     if lambda_val != 0.0:
-        lagrange_multiplier = (
+        regularization_term = (
             2
             * lambda_val
             * np.conj(gains)
             / np.abs(gains) ** 2.0
             * np.sum(np.angle(gains), axis=0)[np.newaxis, :]
         )
-        lagrange_multiplier = np.stack(
-            (np.imag(lagrange_multiplier), np.real(lagrange_multiplier)), axis=0
+        regularization_term = np.stack(
+            (np.imag(regularization_term), np.real(regularization_term)), axis=0
         ).flatten()
-        grad += lagrange_multiplier
+        grad += regularization_term
 
     return grad
 
@@ -345,7 +347,8 @@ def hess_dw_cal(
 ):
 
     if lambda_val is None:
-        lambda_val = float(Nbls)
+        #lambda_val = float(Nbls)
+        lambda_val = 1.
 
     gains = np.reshape(x, (2, Nants, Nfreqs))
     gains = gains[0, :, :] + 1.0j * gains[1, :, :]
@@ -430,7 +433,7 @@ def hess_dw_cal(
         hess[ant_ind, ant_ind, :, :, 1] = 2 * np.imag(ant_diags[ant_ind, :, :])
         hess[ant_ind, ant_ind, :, :, 2] = 2 * np.real(ant_diags[ant_ind, :, :])
 
-    if lambda_val != 0.0:  # Lagrange multiplier
+    if lambda_val != 0.0:  # Apply regularization
 
         im_part = np.imag(gains) / np.abs(gains) ** 2.0
         real_part = np.real(gains) / np.abs(gains) ** 2.0
@@ -949,7 +952,7 @@ def calibration_optimization(
             1,
         ]
     )
-    # Ensure that the angle of the gains is mean-zero for each frequency
+    # Ensure that the phase of the gains is mean-zero for each frequency
     avg_angle = np.arctan2(
         np.mean(np.sin(np.angle(gains_fit)), axis=0),
         np.mean(np.cos(np.angle(gains_fit)), axis=0),
