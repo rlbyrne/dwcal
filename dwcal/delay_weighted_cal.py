@@ -530,9 +530,9 @@ def get_weighted_weight_mat(
     Nbls,
     uvw_array,
     channel_width_hz,
-    wedge_slope_factor=0.653,
+    wedge_slope_factor=0.628479,
     wedge_delay_buffer=6.5e-8,
-    downweight_frac=0.053,
+    downweight_frac=0.0131875,
 ):
 
     c = 3.0 * 10**8  # Speed of light
