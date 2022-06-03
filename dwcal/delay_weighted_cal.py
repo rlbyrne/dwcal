@@ -989,8 +989,9 @@ def calibrate(
 ):
 
     if log_file_path is not None:
-        sys.stdout = open(log_file_path, "w")
-        sys.stderr = sys.stdout
+        stdout_orig = sys.stdout
+        stderr_orig = sys.stderr
+        sys.stdout = sys.stderr = log_file_new = open(log_file_path, "w")
 
     start = time.time()
 
@@ -1047,4 +1048,7 @@ def calibrate(
     print(f"Total runtime: {(end - start)/60.} minutes")
 
     if log_file_path is not None:
-        sys.stdout.close()
+        sys.stdout = stdout_orig
+        sys.stderr = stderr_orig
+        log_file_new.close()
+        
