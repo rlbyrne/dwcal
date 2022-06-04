@@ -227,7 +227,7 @@ def cost_function_dw_cal(
 
     if lambda_val is None:
         # lambda_val = float(Nbls)
-        lambda_val = 1.0
+        lambda_val = 0.1
 
     gains = np.reshape(x, (2, Nants, Nfreqs))
     gains = gains[0, :, :] + 1.0j * gains[1, :, :]
@@ -264,7 +264,7 @@ def jac_dw_cal(
 
     if lambda_val is None:
         # lambda_val = float(Nbls)
-        lambda_val = 1.0
+        lambda_val = 0.1
 
     gains = np.reshape(x, (2, Nants, Nfreqs))
     gains = gains[0, :, :] + 1.0j * gains[1, :, :]
@@ -348,7 +348,7 @@ def hess_dw_cal(
 
     if lambda_val is None:
         # lambda_val = float(Nbls)
-        lambda_val = 1.0
+        lambda_val = 0.1
 
     gains = np.reshape(x, (2, Nants, Nfreqs))
     gains = gains[0, :, :] + 1.0j * gains[1, :, :]
@@ -553,7 +553,7 @@ def get_weighted_weight_mat(
             ]
 
     # Make normalization match identity matrix weight mat
-    normalization_factor = Nfreqs * Nbls / np.sum(weight_mat)
+    normalization_factor = Nfreqs * Nbls / np.sum(np.abs(weight_mat))
     weight_mat *= normalization_factor
 
     return weight_mat
