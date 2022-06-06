@@ -553,7 +553,7 @@ def get_weighted_weight_mat(
             ]
 
     # Make normalization match identity matrix weight mat
-    normalization_factor = Nfreqs * Nbls / np.sum(np.abs(weight_mat))
+    normalization_factor = Nfreqs * Nbls / np.sum(weight_mat)
     weight_mat *= normalization_factor
 
     return weight_mat
