@@ -561,6 +561,50 @@ def get_weighted_weight_mat(
     return weight_mat
 
 
+def get_weight_mat_with_gaussian_window_fit(
+    Nfreqs,
+    Nbls,
+    uvw_array,
+    channel_width_hz,
+    wedge_slope_factor=0.6284790822752272,
+    wedge_delay_buffer=6.5e-8,
+    wedge_variance=7.101176738469631,
+    window_min_variance=2.38625311e-02,
+    window_gaussian_amp=6.73642264e00,
+    window_gaussian_stddev=6.58794760e-07,
+):
+
+    c = 3.0 * 10**8  # Speed of light
+    bl_lengths = np.sqrt(np.sum(uvw_array**2.0, axis=1))
+    delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
+    delay_weighting = np.full((Nbls, Nfreqs), wedge_variance)
+    for delay_ind, delay_val in enumerate(delay_array):
+        window_bls = np.where(
+            wedge_slope_factor * bl_lengths / c + wedge_delay_buffer
+            <= np.abs(delay_val)
+        )[0]
+        delay_weighting[window_bls, delay_ind] = (
+            window_gaussian_amp
+            * np.exp(-(delay_val**2) / window_gaussian_stddev**2 / 2)
+            + window_min_variance
+        )
+    freq_weighting = np.fft.ifft(delay_weighting, axis=1)
+    weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
+    for freq_ind1 in range(Nfreqs):
+        for freq_ind2 in range(Nfreqs):
+            weight_mat[:, freq_ind1, freq_ind2] = freq_weighting[
+                :, np.abs(freq_ind1 - freq_ind2)
+            ]
+
+    # Make normalization match identity matrix weight mat
+    normalization_factor = (
+        Nfreqs * Nbls / np.sum(np.trace(weight_mat, axis1=1, axis2=2))
+    )
+    weight_mat *= normalization_factor
+
+    return weight_mat
+
+
 def apply_calibration(
     cal,
     data_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
@@ -763,7 +807,8 @@ def initialize_gains_from_calfile(
 def calibration_optimization(
     data,
     model,
-    use_wedge_exclusion=False,
+    #use_wedge_exclusion=False,
+    weight_mat_option="diagonal",
     log_file_path=None,
     apply_flags=False,
     xtol=1e-8,
@@ -852,16 +897,25 @@ def calibration_optimization(
     x0 = np.stack((np.real(gains_init), np.imag(gains_init)), axis=0).flatten()
 
     start_weight_mat = time.time()
-    if use_wedge_exclusion:
-        print(f"use_wedge_exclusion=True: Generating wedge excluding covariance matrix")
+    if weight_mat_option == "diagonal":
+        print(f"weight_mat_option = 'diagonal': Weighting matrix is the identity")
+        sys.stdout.flush()
+        weight_mat = get_weight_mat_identity(Nfreqs, Nbls)
+    elif weight_mat_option == "weighted":
+        print(f"weight_mat_option = 'weighted': Generating wedge excluding weighting matrix")
         sys.stdout.flush()
         weight_mat = get_weighted_weight_mat(
             Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
         )
-    else:
-        print(f"use_wedge_exclusion=False: Covariance matrix is the identity")
+    elif weight_mat_option == "gaussian window fit":
+        print(f"weight_mat_option = 'gaussian window fit': Generating wedge excluding weighting matrix with a Gaussian window fit")
         sys.stdout.flush()
-        weight_mat = get_weight_mat_identity(Nfreqs, Nbls)
+        weight_mat = get_weight_mat_with_gaussian_window_fit(
+            Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
+        )
+    else:
+        print("ERROR: Unknown value of weight_mat_option. Exiting.")
+        sys.exit(1)
     end_weight_mat = time.time()
     print(
         f"Time generating covariance matrix: {(end_weight_mat - start_weight_mat)/60.} minutes"
@@ -975,7 +1029,7 @@ def calibrate(
     obsid="1061316296",
     pol="XX",
     use_autos=False,
-    use_wedge_exclusion=False,
+    weight_mat_option="diagonal",  # Options are "diagonal", "weighted", or "gaussian window fit"
     cal_savefile=None,
     calibrated_data_savefile=None,
     log_file_path=None,
@@ -989,6 +1043,11 @@ def calibrate(
     use_newtons_method=False,
     use_grad_descent=False,
 ):
+
+    if weight_mat_option not in ["diagonal", "weighted", "gaussian window fit"]:
+        print("ERROR: Unknown value of weight_mat_option.")
+        print('Options are: "diagonal", "weighted", "gaussian window fit". Exiting.')
+        sys.exit(1)
 
     if log_file_path is not None:
         stdout_orig = sys.stdout
@@ -1017,7 +1076,7 @@ def calibrate(
     cal = calibration_optimization(
         data,
         model,
-        use_wedge_exclusion=use_wedge_exclusion,
+        weight_mat_option=weight_mat_option,
         log_file_path=log_file_path,
         apply_flags=apply_flags,
         xtol=xtol,
