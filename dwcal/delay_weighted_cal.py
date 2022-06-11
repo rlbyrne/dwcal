@@ -569,9 +569,9 @@ def get_weight_mat_with_gaussian_window_fit(
     wedge_slope_factor=0.6284790822752272,
     wedge_delay_buffer=6.5e-8,
     wedge_variance=7.101176738469631,
-    window_min_variance=2.38625311e-02,
-    window_gaussian_amp=6.73642264e00,
-    window_gaussian_stddev=6.58794760e-07,
+    window_min_variance=2.21780714e-03,
+    window_gaussian_amp=5.62605392e-01,
+    window_gaussian_stddev=7.97851927e-07,
 ):
 
     c = 3.0 * 10**8  # Speed of light
