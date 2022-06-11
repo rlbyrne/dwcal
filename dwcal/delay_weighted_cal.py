@@ -577,17 +577,18 @@ def get_weight_mat_with_gaussian_window_fit(
     c = 3.0 * 10**8  # Speed of light
     bl_lengths = np.sqrt(np.sum(uvw_array**2.0, axis=1))
     delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
-    delay_weighting = np.full((Nbls, Nfreqs), wedge_variance)
+    delay_weighting_inv = np.full((Nbls, Nfreqs), wedge_variance)
     for delay_ind, delay_val in enumerate(delay_array):
         window_bls = np.where(
             wedge_slope_factor * bl_lengths / c + wedge_delay_buffer
             <= np.abs(delay_val)
         )[0]
-        delay_weighting[window_bls, delay_ind] = (
+        delay_weighting_inv[window_bls, delay_ind] = (
             window_gaussian_amp
             * np.exp(-(delay_val**2) / window_gaussian_stddev**2 / 2)
             + window_min_variance
         )
+    delay_weighting = 1./delay_weighting_inv
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
     weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
     for freq_ind1 in range(Nfreqs):
