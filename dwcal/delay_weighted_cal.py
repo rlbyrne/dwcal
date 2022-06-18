@@ -612,7 +612,7 @@ def get_weight_mat_with_exponential_window_fit(
     uvw_array,
     channel_width_hz,
     wedge_slope_factor_inner=0.23,
-    wedge_slope_factor_outer=.7
+    wedge_slope_factor_outer=.7,
     wedge_delay_buffer=6.5e-8,
     wedge_variance_inner=1084.9656666412166,
     wedge_variance_outer=28.966173241799588,
