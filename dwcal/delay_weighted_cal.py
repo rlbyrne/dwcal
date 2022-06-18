@@ -630,7 +630,7 @@ def get_weight_mat_with_exponential_window_fit(
     ) + window_min_variance
     exp_function[np.where(exp_function > wedge_variance_outer)[0]] = wedge_variance_outer
 
-    delay_weighting_inv = np.repeat(exp_function, Nbls, axis=0)
+    delay_weighting_inv = np.repeat(exp_function[np.newaxis, :], Nbls, axis=0)
     for delay_ind, delay_val in enumerate(delay_array):
         wedge_bls_outer = np.where(
             wedge_slope_factor_outer * bl_lengths / c + wedge_delay_buffer
