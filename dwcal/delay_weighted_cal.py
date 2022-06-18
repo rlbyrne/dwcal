@@ -606,6 +606,61 @@ def get_weight_mat_with_gaussian_window_fit(
     return weight_mat
 
 
+def get_weight_mat_with_exponential_window_fit(
+    Nfreqs,
+    Nbls,
+    uvw_array,
+    channel_width_hz,
+    wedge_slope_factor_inner=0.23,
+    wedge_slope_factor_outer=.7
+    wedge_delay_buffer=6.5e-8,
+    wedge_variance_inner=1084.9656666412166,
+    wedge_variance_outer=28.966173241799588,
+    window_min_variance=5.06396954e-01,
+    window_exp_amp=1.19213736e+03,
+    window_exp_width=6.93325643e-08,
+):
+
+    c = 3.0 * 10**8  # Speed of light
+    bl_lengths = np.sqrt(np.sum(uvw_array**2.0, axis=1))
+    delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
+
+    exp_function = window_exp_amp * np.exp(
+        -np.abs(delay_array) / window_exp_width/2
+    ) + window_min_variance
+    exp_function[np.where(exp_function > wedge_variance_outer)[0]] = wedge_variance_outer
+
+    delay_weighting_inv = np.repeat(exp_function, Nbls, axis=0)
+    for delay_ind, delay_val in enumerate(delay_array):
+        wedge_bls_outer = np.where(
+            wedge_slope_factor_outer * bl_lengths / c + wedge_delay_buffer
+            > np.abs(delay_val)
+        )[0]
+        delay_weighting_inv[wedge_bls_outer, delay_ind] = wedge_variance_outer
+        wedge_bls_inner = np.where(
+            wedge_slope_factor_inner * bl_lengths / c + wedge_delay_buffer
+            > np.abs(delay_val)
+        )[0]
+        delay_weighting_inv[wedge_bls_inner, delay_ind] = wedge_variance_inner
+
+    delay_weighting = 1./delay_weighting_inv
+    freq_weighting = np.fft.ifft(delay_weighting, axis=1)
+    weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
+    for freq_ind1 in range(Nfreqs):
+        for freq_ind2 in range(Nfreqs):
+            weight_mat[:, freq_ind1, freq_ind2] = freq_weighting[
+                :, np.abs(freq_ind1 - freq_ind2)
+            ]
+
+    # Make normalization match identity matrix weight mat
+    normalization_factor = (
+        Nfreqs * Nbls / np.sum(np.trace(weight_mat, axis1=1, axis2=2))
+    )
+    weight_mat *= normalization_factor
+
+    return weight_mat
+
+
 def apply_calibration(
     cal,
     data_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
@@ -914,6 +969,12 @@ def calibration_optimization(
         weight_mat = get_weight_mat_with_gaussian_window_fit(
             Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
         )
+    elif weight_mat_option == "exponential window fit":
+        print(f"weight_mat_option = 'exponential window fit': Generating wedge excluding weighting matrix with an exponential window fit")
+        sys.stdout.flush()
+        weight_mat = get_weight_mat_with_exponential_window_fit(
+            Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
+        )
     else:
         print("ERROR: Unknown value of weight_mat_option. Exiting.")
         sys.exit(1)
@@ -1030,7 +1091,7 @@ def calibrate(
     obsid="1061316296",
     pol="XX",
     use_autos=False,
-    weight_mat_option="diagonal",  # Options are "diagonal", "weighted", or "gaussian window fit"
+    weight_mat_option="diagonal",  # Options are "diagonal", "weighted", "gaussian window fit", or "exponential window fit"
     cal_savefile=None,
     calibrated_data_savefile=None,
     log_file_path=None,
@@ -1045,9 +1106,9 @@ def calibrate(
     use_grad_descent=False,
 ):
 
-    if weight_mat_option not in ["diagonal", "weighted", "gaussian window fit"]:
+    if weight_mat_option not in ["diagonal", "weighted", "gaussian window fit", "exponential window fit"]:
         print("ERROR: Unknown value of weight_mat_option.")
-        print('Options are: "diagonal", "weighted", "gaussian window fit". Exiting.')
+        print('Options are: "diagonal", "weighted", "gaussian window fit", "exponential window fit". Exiting.')
         sys.exit(1)
 
     if log_file_path is not None:
