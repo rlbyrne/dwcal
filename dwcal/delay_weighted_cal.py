@@ -650,7 +650,7 @@ def get_weight_mat_with_exponential_window_fit(
 
     delay_weighting = 1.0 / delay_weighting_inv
     if use_blackman_harris:
-        window = signal.windows.blackmanharris(Nfreqs)
+        window = signal.windows.blackmanharris(Nfreqs + 2)[1:-1]
         window_ordered = window[np.argsort(delay_array)]
         delay_weighting *= window_ordered[np.newaxis, :]
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
