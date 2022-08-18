@@ -32,7 +32,7 @@ def get_test_data(
         else:
             print("ERROR: Unknown polarization.")
             sys.exit(1)
-        print(f"Loading model from {model_path}.")
+        print(f"Loading model from {model_path}")
         sys.stdout.flush()
         model.read_uvfits(model_path, polarizations=pol_int)
     else:
@@ -59,8 +59,8 @@ def get_test_data(
             sys.stdout.flush()
         model.read_fhd(model_filelist, use_model=model_use_model)
 
-    # Average across time
-    model.downsample_in_time(n_times_to_avg=int(model.Ntimes))
+    if model.Ntimes > 1:  # Average across time
+        model.downsample_in_time(n_times_to_avg=int(model.Ntimes))
 
     if debug_limit_freqs is not None:  # Limit frequency axis for debugging
         min_freq_channel = round(model.Nfreqs / 2 - debug_limit_freqs / 2)
@@ -88,7 +88,7 @@ def get_test_data(
             else:
                 print("ERROR: Unknown polarization.")
                 sys.exit(1)
-            print(f"Loading data from {data_path}.")
+            print(f"Loading data from {data_path}")
             sys.stdout.flush()
             data.read_uvfits(data_path, polarizations=pol_int)
         else:
@@ -115,8 +115,8 @@ def get_test_data(
                 sys.stdout.flush()
             data.read_fhd(data_filelist, use_model=data_use_model)
 
-        # Average across time
-        data.downsample_in_time(n_times_to_avg=int(data.Ntimes))
+        if data.Ntimes > 1: # Average across time
+            data.downsample_in_time(n_times_to_avg=int(data.Ntimes))
         if debug_limit_freqs is not None:
             data.select(frequencies=use_frequencies)
         if use_antenna_list is not None:
