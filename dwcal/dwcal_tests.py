@@ -337,31 +337,3 @@ def test_derivative_calculations_all_baselines():
         print("All tests passed successfully.")
     else:
         print("WARNING: Failed tests.")
-
-
-def test_calibration():
-
-    data, model = dwcal.get_test_data(
-        model_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
-        model_use_model=True,
-        data_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
-        data_use_model=True,
-        obsid="1061316296",
-        pol="XX",
-        use_autos=False,
-        debug_limit_freqs=None,
-        use_antenna_list=[3, 4, 57, 70, 92, 110],
-        use_flagged_baselines=False,
-    )
-
-    cal = dwcal.calibration_optimization(
-        data,
-        model,
-        use_wedge_exclusion=False,
-        log_file_path=None,
-        apply_flags=False,
-    )
-
-
-if __name__ == "__main__":
-    test_derivative_calculations_all_baselines()

@@ -10,11 +10,11 @@ import pyuvdata
 
 
 def get_test_data(
-    model_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
-    model_use_model=True,
-    data_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
-    data_use_model=True,
-    obsid="1061316296",
+    model_path="",  # Path to uvfits file or FHD output directory
+    data_path="",  # Path to uvfits file or FHD output directory
+    model_use_model=True,  # Used only if model_path is an FHD directory
+    data_use_model=True,  # Used only if data_path is an FHD directory
+    obsid="1061316296",  # Used only if paths are FHD output directories
     pol="XX",
     use_autos=False,
     debug_limit_freqs=None,
@@ -863,7 +863,6 @@ def initialize_gains_from_calfile(
 def calibration_optimization(
     data,
     model,
-    #use_wedge_exclusion=False,
     weight_mat_option="diagonal",
     log_file_path=None,
     apply_flags=False,
@@ -1084,11 +1083,11 @@ def calibration_optimization(
 
 
 def calibrate(
-    model_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
+    model_path="",
+    data_path="",
     model_use_model=True,
-    data_path="/Users/ruby/Astro/FHD_outputs/fhd_rlb_model_GLEAM_Aug2021",
     data_use_model=True,
-    obsid="1061316296",
+    obsid="",
     pol="XX",
     use_autos=False,
     weight_mat_option="diagonal",  # Options are "diagonal", "weighted", "gaussian window fit", or "exponential window fit"
