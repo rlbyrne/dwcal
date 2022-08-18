@@ -15,7 +15,7 @@ def get_test_data(
     data_path="",  # Path to uvfits file or FHD output directory
     model_use_model=True,  # Used only if model_path is an FHD directory
     data_use_model=True,  # Used only if data_path is an FHD directory
-    obsid="1061316296",  # Used only if paths are FHD output directories
+    obsid="",  # Used only if paths are FHD output directories
     pol="XX",
     use_autos=False,
     debug_limit_freqs=None,
