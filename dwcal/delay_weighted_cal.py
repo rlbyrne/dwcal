@@ -7,6 +7,7 @@ import scipy
 import scipy.optimize
 import time
 import pyuvdata
+from scipy import signal
 
 
 def get_test_data(
@@ -588,7 +589,7 @@ def get_weight_mat_with_gaussian_window_fit(
             * np.exp(-(delay_val**2) / window_gaussian_stddev**2 / 2)
             + window_min_variance
         )
-    delay_weighting = 1./delay_weighting_inv
+    delay_weighting = 1.0 / delay_weighting_inv
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
     weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
     for freq_ind1 in range(Nfreqs):
@@ -612,23 +613,27 @@ def get_weight_mat_with_exponential_window_fit(
     uvw_array,
     channel_width_hz,
     wedge_slope_factor_inner=0.23,
-    wedge_slope_factor_outer=.7,
+    wedge_slope_factor_outer=0.7,
     wedge_delay_buffer=6.5e-8,
     wedge_variance_inner=1084.9656666412166,
     wedge_variance_outer=28.966173241799588,
     window_min_variance=5.06396954e-01,
-    window_exp_amp=1.19213736e+03,
+    window_exp_amp=1.19213736e03,
     window_exp_width=6.93325643e-08,
+    use_blackman_harris=False,
 ):
 
     c = 3.0 * 10**8  # Speed of light
     bl_lengths = np.sqrt(np.sum(uvw_array**2.0, axis=1))
     delay_array = np.fft.fftfreq(Nfreqs, d=channel_width_hz)
 
-    exp_function = window_exp_amp * np.exp(
-        -np.abs(delay_array) / window_exp_width/2
-    ) + window_min_variance
-    exp_function[np.where(exp_function > wedge_variance_outer)[0]] = wedge_variance_outer
+    exp_function = (
+        window_exp_amp * np.exp(-np.abs(delay_array) / window_exp_width / 2)
+        + window_min_variance
+    )
+    exp_function[
+        np.where(exp_function > wedge_variance_outer)[0]
+    ] = wedge_variance_outer
 
     delay_weighting_inv = np.repeat(exp_function[np.newaxis, :], Nbls, axis=0)
     for delay_ind, delay_val in enumerate(delay_array):
@@ -643,7 +648,11 @@ def get_weight_mat_with_exponential_window_fit(
         )[0]
         delay_weighting_inv[wedge_bls_inner, delay_ind] = wedge_variance_inner
 
-    delay_weighting = 1./delay_weighting_inv
+    delay_weighting = 1.0 / delay_weighting_inv
+    if use_blackman_harris:
+        window = signal.windows.blackmanharris(Nfreqs + 2)[1:-1]
+        window_ordered = window[np.argsort(delay_array)]
+        delay_weighting *= window_ordered[np.newaxis, :]
     freq_weighting = np.fft.ifft(delay_weighting, axis=1)
     weight_mat = np.zeros((Nbls, Nfreqs, Nfreqs), dtype=complex)
     for freq_ind1 in range(Nfreqs):
@@ -871,6 +880,7 @@ def calibration_optimization(
     gain_init_calfile=None,
     use_newtons_method=False,
     use_grad_descent=False,
+    use_blackman_harris=False,
 ):
 
     Nants = data.Nants_data
@@ -951,28 +961,47 @@ def calibration_optimization(
     # Expand the initialized values
     x0 = np.stack((np.real(gains_init), np.imag(gains_init)), axis=0).flatten()
 
+    if use_blackman_harris and weight_mat_option != "exponential window fit":
+        print(
+            "WARNING: Blackman-Harris is currently only supported when weight_mat_option='exponential window fit'."
+        )
+
     start_weight_mat = time.time()
     if weight_mat_option == "diagonal":
-        print(f"weight_mat_option = 'diagonal': Weighting matrix is the identity")
+        print("weight_mat_option = 'diagonal': Weighting matrix is the identity")
         sys.stdout.flush()
         weight_mat = get_weight_mat_identity(Nfreqs, Nbls)
     elif weight_mat_option == "weighted":
-        print(f"weight_mat_option = 'weighted': Generating wedge excluding weighting matrix")
+        print(
+            "weight_mat_option = 'weighted': Generating wedge excluding weighting matrix"
+        )
         sys.stdout.flush()
         weight_mat = get_weighted_weight_mat(
             Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
         )
     elif weight_mat_option == "gaussian window fit":
-        print(f"weight_mat_option = 'gaussian window fit': Generating wedge excluding weighting matrix with a Gaussian window fit")
+        print(
+            "weight_mat_option = 'gaussian window fit': Generating wedge excluding weighting matrix with a Gaussian window fit"
+        )
         sys.stdout.flush()
         weight_mat = get_weight_mat_with_gaussian_window_fit(
             Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
         )
     elif weight_mat_option == "exponential window fit":
-        print(f"weight_mat_option = 'exponential window fit': Generating wedge excluding weighting matrix with an exponential window fit")
+        print(
+            "weight_mat_option = 'exponential window fit': Generating wedge excluding weighting matrix with an exponential window fit"
+        )
+        if use_blackman_harris:
+            print(
+                "use_blackman_harris = True: Applying Blackman-Harris to weighting matrix"
+            )
         sys.stdout.flush()
         weight_mat = get_weight_mat_with_exponential_window_fit(
-            Nfreqs, Nbls, metadata_reference.uvw_array, metadata_reference.channel_width
+            Nfreqs,
+            Nbls,
+            metadata_reference.uvw_array,
+            metadata_reference.channel_width,
+            use_blackman_harris=use_blackman_harris,
         )
     else:
         print("ERROR: Unknown value of weight_mat_option. Exiting.")
@@ -1105,9 +1134,16 @@ def calibrate(
     use_grad_descent=False,
 ):
 
-    if weight_mat_option not in ["diagonal", "weighted", "gaussian window fit", "exponential window fit"]:
+    if weight_mat_option not in [
+        "diagonal",
+        "weighted",
+        "gaussian window fit",
+        "exponential window fit",
+    ]:
         print("ERROR: Unknown value of weight_mat_option.")
-        print('Options are: "diagonal", "weighted", "gaussian window fit", "exponential window fit". Exiting.')
+        print(
+            'Options are: "diagonal", "weighted", "gaussian window fit", "exponential window fit". Exiting.'
+        )
         sys.exit(1)
 
     if log_file_path is not None:
