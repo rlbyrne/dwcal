@@ -187,9 +187,7 @@ def test_hess(
         pass_text = "passed"
     else:
         pass_text = "FAILED!!!!!!!!!"
-    print(
-        f"Hess calc., {part1_text}, ant {test_ant}, freq {test_freq}: {pass_text}"
-    )
+    print(f"Hess calc., {part1_text}, ant {test_ant}, freq {test_freq}: {pass_text}")
 
     return np.min(pass_condition)
 
@@ -197,7 +195,7 @@ def test_hess(
 def test_derivative_calculations_all_baselines():
 
     Nants = 10
-    Nbls = int((Nants ** 2 - Nants) / 2)
+    Nbls = int((Nants**2 - Nants) / 2)
     Ntimes = 1
     Nfreqs = 5
 
