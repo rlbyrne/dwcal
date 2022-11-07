@@ -560,6 +560,7 @@ def get_weight_mat_with_wedge(
 
     return weight_mat
 
+
 def get_weight_mat_with_exponential_window_fit(
     Nfreqs,
     Nbls,
@@ -573,12 +574,12 @@ def get_weight_mat_with_exponential_window_fit(
     window_min_variance=5.06396954e-01,
     window_exp_amp=1.19213736e03,
     window_exp_width=6.93325643e-08,
-    oversample_factor=128.,
+    oversample_factor=128.0,
 ):
 
     c = 3.0 * 10**8  # Speed of light
     bl_lengths = np.sqrt(np.sum(uvw_array**2.0, axis=1))
-    delay_array = np.fft.fftfreq(Nfreqs*int(oversample_factor), d=channel_width_hz)
+    delay_array = np.fft.fftfreq(Nfreqs * int(oversample_factor), d=channel_width_hz)
 
     exp_function = (
         window_exp_amp * np.exp(-np.abs(delay_array) / window_exp_width / 2)
@@ -618,6 +619,7 @@ def get_weight_mat_with_exponential_window_fit(
     weight_mat *= normalization_factor
 
     return weight_mat
+
 
 def apply_calibration(
     cal,
@@ -1070,9 +1072,7 @@ def calibrate(
         "exponential window fit",
     ]:
         print("ERROR: Unknown value of weight_mat_option.")
-        print(
-            'Options are: "diagonal", "wedge", "exponential window fit". Exiting.'
-        )
+        print('Options are: "diagonal", "wedge", "exponential window fit". Exiting.')
         sys.exit(1)
 
     if log_file_path is not None:
