@@ -20,6 +20,7 @@ def get_test_data(
     debug_limit_freqs=None,
     use_antenna_list=None,
     use_flagged_baselines=False,
+    Ntimes=1,
 ):
 
     model = pyuvdata.UVData()
@@ -58,8 +59,11 @@ def get_test_data(
             sys.stdout.flush()
         model.read_fhd(model_filelist, use_model=model_use_model)
 
-    if model.Ntimes > 1:  # Average across time
-        model.downsample_in_time(n_times_to_avg=int(model.Ntimes))
+    if model.Ntimes > Ntimes:  # Average across time
+        model.downsample_in_time(n_times_to_avg=int(model.Ntimes / Ntimes), keep_ragged=False)
+    if model.Ntimes != Ntimes:
+        print(f"WARNING: {Ntimes} time samples requested, but only {model.Ntimes} provided.")
+        Ntimes = model.Ntimes
 
     if debug_limit_freqs is not None:  # Limit frequency axis for debugging
         min_freq_channel = round(model.Nfreqs / 2 - debug_limit_freqs / 2)
@@ -114,8 +118,12 @@ def get_test_data(
                 sys.stdout.flush()
             data.read_fhd(data_filelist, use_model=data_use_model)
 
-        if data.Ntimes > 1:  # Average across time
-            data.downsample_in_time(n_times_to_avg=int(data.Ntimes))
+        if data.Ntimes > Ntimes:  # Average across time
+            data.downsample_in_time(n_times_to_avg=int(data.Ntimes / Ntimes), keep_ragged=False)
+        if data.Ntimes != Ntimes:
+            print("ERROR: Model and data time steps do not match. Exiting.")
+            sys.exit(1)
+
         if debug_limit_freqs is not None:
             data.select(frequencies=use_frequencies)
         if use_antenna_list is not None:
@@ -1064,6 +1072,7 @@ def calibrate(
     gain_init_calfile=None,
     use_newtons_method=False,
     use_grad_descent=False,
+    Ntimes=1,
 ):
 
     if weight_mat_option not in [
@@ -1094,6 +1103,7 @@ def calibrate(
         debug_limit_freqs=debug_limit_freqs,
         use_antenna_list=use_antenna_list,
         use_flagged_baselines=use_flagged_baselines,
+        Ntimes=Ntimes,
     )
     end_read_data = time.time()
     print(f"Time reading data: {(end_read_data - start_read_data)/60.} minutes")
